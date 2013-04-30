@@ -1,0 +1,125 @@
+
+<!doctype html>
+<html>
+    <head>
+        <title></title>
+        <meta charset="utf-8">
+        <link rel="stylesheet" href="style.css">
+    </head>
+    <body>
+        <div class="wrap">
+            <section>
+                <h2>
+                    <svg version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px"
+     width="50px" height="50px" viewBox="0 0 50 50">
+                        <path d="M35.356,21.415v-5.208c0-1.23-1.125-2.236-2.5-2.236H4.466c-1.374,0-2.499,1.006-2.499,2.236v21.586 c0,1.227,1.125,2.234,2.499,2.234h28.391c1.375,0,2.5-1.008,2.5-2.234v-5.143l0.001,0.071l13.065,5.479V15.885L35.356,21.415z"/>
+                    </svg>
+                    <span id="title">Get a Chat.</span>
+                </h2>
+                <p class="desc">Video chat with up to 6 people.</p>
+                <h3 id="roomLink">
+                    <span id="subTitle">
+                </h3>
+                <form id="createRoom">
+                    <input id="sessionInput" placeholder="Name youself!" autofocus/>
+                    <button type="submit">Let&rsquo;s go!</button>
+                </form>
+                <video id="localVideo"></video>
+                <div id="remotes">
+                </div>
+                <div id="game">
+                    <aside id="instructions" style="position: absolute">
+                        <h3>Bundle List.</h3>
+                        <p>Have fun!</p>
+                        <div id="blist"></div>
+                    </aside>
+                </div>
+              
+            </section>
+        </div>
+        <script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.0/jquery.min.js"></script>
+        <script src="http://192.168.1.106:8888/socket.io/socket.io.js"></script>
+        <script src="http://conversat.io/fluidgrid.js"></script>
+        <script src="simplewebrtc.js"></script>
+        <script>
+            // grab the room from the URL
+            var room = location.search.split("?")[1];
+
+            // have we ever had a video running
+            var hasBeenActive = false;
+
+            // create our webrtc connection
+            var webrtc = new WebRTC({
+                // the id/element dom element that will hold "our" video
+                localVideoEl: 'localVideo',
+                // the id/element dom element that will hold remote videos
+                remoteVideosEl: 'remotes',
+                // immediately ask for camera access
+                log: true,
+                url: 'http://192.168.1.106:8888'
+            });
+
+            // when it's ready, join if we got a room from the URL
+            webrtc.on('readyToCall', function () {
+                // you can name it anything
+                if (room) webrtc.joinRoom(room);
+                //webrtc.joinRoom("hhh");
+                console.log("ready is:"+room);
+                webrtc.reqChatList();
+                //document.getElementById("game").style.display="block";
+                //document.getElementById("instructions").style.display="block";
+
+            });
+            
+            // do our fancy layout handling when people resize the window
+            // or people join or leave
+            var shuffle = getFluidGridFunction('#remotes >');
+            $(window).on('resize', shuffle);
+            $(window).on('resize', resizeCanvas);            
+            webrtc.on('videoAdded', shuffle);
+            webrtc.on('videoRemoved', shuffle);
+
+            // play some sounds when people come and go
+
+
+            function isEmpty() {
+                return $('#remotes video').length === 0;
+            }
+
+           
+            function resizeCanvas() {
+                $('canvas').css('height', $('#remotes').height() - 106);
+            }
+
+            // Since we use this twice we put it here
+            function setRoom(name) {
+                webrtc.startLocalVideo();
+                $('form').remove();
+                $('#title').text(name);
+                //$('#subTitle').text(location.href);
+                $('body').addClass('active');
+                //runIfEmpty();
+            }
+
+            if (room) {
+                setRoom(room);
+            } else {
+                $('form').submit(function (e) {
+                    var val = $('#sessionInput').val().toLowerCase().replace(/\s/g, '-').replace(/[^A-Za-z0-9_\-]/g, '');
+                    webrtc.createRoom(val, function (err, name) {
+                        var newUrl = location.href + '?' + name;
+                        if (err) {
+                            alert("That name is currently in use. Please pick another name.");
+                            //$.showMessage('That name is currently in use. Please pick another name.');
+                            $('#sessionInput').val('').focus();
+                        } else {
+                            window.location = '?' + name;
+                        }
+                    });
+                    return false;          
+                });
+            }
+        </script>
+       
+    </body>
+</html>
